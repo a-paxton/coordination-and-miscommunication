@@ -120,7 +120,9 @@ write.csv(cross_rec_drp,'./data/drp-workspace-cross.csv',
      row.names=FALSE)
 ```
 
-![Mean diagonal recurrence plot from CRQA across partners' workspace states.](./figures/aggregated_drp_commtype-knitr.png)
+![](./figures/aggregated_drp_commtype-knitr.png)
+
+**Figure**. Mean diagonal recurrence plot from CRQA across partners' workspace states.
 
 ------------------------------------------------------------------------
 
@@ -676,7 +678,9 @@ pander_lme(accuracy.miscomm.lme.raw,stats.caption=TRUE)
 
 As anticipated, we find that *increased* workspace congruence is associated with *lower* miscommunication rates. We believe that exploring the ties between linguistic patterns and the unfolding dynamics of miscommunication would be an interesting avenue of scientific study in and of themselves. However, the above results suggest that these patterns may also be important to larger-scale task performance.
 
-![Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.](./figures/workspace_by_miscomm_and_lag-knitr.png)
+![](./figures/workspace_by_miscomm_and_lag-knitr.png)
+
+**Figure**. Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.
 
 ------------------------------------------------------------------------
 
@@ -748,7 +752,9 @@ pander_lme(accuracy.time.lme.raw,stats.caption=TRUE)
 |  **ot1.tTurn**  | -5.243e-07 |  0.0001013 | -0.005175 |   1   |        |
 |  **ot2.tTurn**  | -0.0001539 |  0.0001524 |   -1.01   |  0.31 |        |
 
-![Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.](./figures/workspace_by_turns_and_lag-knitr.png)
+![](./figures/workspace_by_turns_and_lag-knitr.png)
+
+**Figure**. Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.
 
 ------------------------------------------------------------------------
 
@@ -854,4 +860,6 @@ Taken together, these analyses provide a new look at the dynamics of miscommunic
 
 We see our results as fitting with a growing perspective within coordination that challenges the simple "more is better" view of coordination (e.g., Abney, Paxton, Dale, & Kello, 2015; Fusaroli et al., 2012; Riley, Richardson, Shockley, & Ramenzoni, 2011). Although many of these behaviors are coordinated generally, that coordination can have positive, negative, or no significant effects on task success. These patterns suggest that increased coordination may not present a uniform benefit to interaction.
 
-![Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).](./figures/workspace-lag-linguistic-interactions-knitr.png)
+![](./figures/workspace-lag-linguistic-interactions-knitr.png)
+
+**Figure**. Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).

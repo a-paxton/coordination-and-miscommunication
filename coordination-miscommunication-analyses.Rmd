@@ -129,7 +129,7 @@ write.csv(cross_rec_drp,'./data/drp-workspace-cross.csv',
 
 ```
 
-```{r plot-workspace-drps, eval=FALSE, echo=FALSE, fig.cap="Mean diagonal recurrence plot from CRQA across partners' workspace states.",fig.width=4, fig.height=3, fig.align='center'}
+```{r plot-workspace-drps, eval=FALSE, echo=FALSE,fig.width=4, fig.height=3, fig.align='center'}
 
 # read in the DRP info
 cross_rec_drp = read.csv('./data/drp-workspace-cross.csv',header=TRUE)
@@ -156,7 +156,9 @@ ggsave('./figures/aggregated_drp_commtype-knitr.png', plot = last_plot(),
 
 ```
 
-![Mean diagonal recurrence plot from CRQA across partners' workspace states.](./figures/aggregated_drp_commtype-knitr.png)
+![](./figures/aggregated_drp_commtype-knitr.png)
+
+**Figure**. Mean diagonal recurrence plot from CRQA across partners' workspace states.
 
 *** 
 
@@ -712,7 +714,7 @@ pander_lme(accuracy.miscomm.lme.raw,stats.caption=TRUE)
 
 As anticipated, we find that *increased* workspace congruence is associated with *lower* miscommunication rates. We believe that exploring the ties between linguistic patterns and the unfolding dynamics of miscommunication would be an interesting avenue of scientific study in and of themselves. However, the above results suggest that these patterns may also be important to larger-scale task performance.
 
-```{r plot-miscommunication-x-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.",fig.width=3, fig.height=4, fig.align='center'}
+```{r plot-miscommunication-x-workspace-congruence, eval=FALSE, echo=FALSE,fig.width=3, fig.height=4, fig.align='center'}
 
 # group data for plotting
 plot_interaction = group_by(agg.plot,lag)
@@ -747,7 +749,9 @@ ggsave('./figures/workspace_by_miscomm_and_lag-knitr.png', plot = last_plot(),
 
 ```
 
-![Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.](./figures/workspace_by_miscomm_and_lag-knitr.png)
+![](./figures/workspace_by_miscomm_and_lag-knitr.png)
+
+**Figure**. Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.
 
 ***
 
@@ -811,7 +815,7 @@ pander_lme(accuracy.time.lme.raw,stats.caption=TRUE)
 
 ```
 
-```{r plot-turns-x-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.",fig.width=3, fig.height=4, fig.align='center'}
+```{r plot-turns-x-workspace-congruence, eval=FALSE, echo=FALSE,fig.width=3, fig.height=4, fig.align='center'}
 
 # group data for plotting
 plot_interaction = group_by(agg.plot,lag)
@@ -846,7 +850,9 @@ ggsave('./figures/workspace_by_turns_and_lag-knitr.png', plot = last_plot(),
 
 ```
 
-![Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.](./figures/workspace_by_turns_and_lag-knitr.png)
+![](./figures/workspace_by_turns_and_lag-knitr.png)
+
+**Figure**. Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.
 
 ***
 
@@ -1020,7 +1026,7 @@ spatial_plot = plot_qi(df=plot_interaction,
 
 ```
 
-```{r plot-all-interactions, eval=FALSE, echo = FALSE, fig.cap="Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).",fig.width=5, fig.height=5, fig.align='center'}
+```{r plot-all-interactions, eval=FALSE, echo = FALSE,fig.width=5, fig.height=5, fig.align='center'}
 
 # create a master legend
 master_legend = gtable_filter(ggplot_gtable(
@@ -1070,4 +1076,6 @@ ggsave('./figures/workspace-lag-linguistic-interactions-knitr.png',
 
 ```
 
-![Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).](./figures/workspace-lag-linguistic-interactions-knitr.png)
+![](./figures/workspace-lag-linguistic-interactions-knitr.png)
+
+**Figure**. Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).
