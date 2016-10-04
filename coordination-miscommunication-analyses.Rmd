@@ -1,0 +1,1073 @@
+---
+title: "Coordination and Miscommunication"
+output:
+ html_document:
+  fig_caption: yes
+  number_sections: yes
+  theme: journal
+---
+
+This R markdown contains the analyses for "Two to tangle: Conceptualizing miscommunication as a dyadic process" (Paxton, Roche, & Tanenhaus, in preparation), which explores linguistic and semantic coordination during miscommunication in a collaborative dyadic task.
+
+To run completely from scratch, you will require the following files:
+
+* `./data/BlocoCharLength12-16-15.csv`
+* `./supplementary-code/libraries-and-functions-CM.r`
+* `./supplementary-code/recurrence-settings-CM.r`
+* `./supplementary-code/continuous-rqa-parameters-CM.r`
+
+Additional files required for the data analysis will be generated at various steps throughout the code, primarily during Sections 1-3. For this reason, Sections 1-3 need only be run once to create and save the files needed for analysis in Section 4. After that, Section 4 can be run repeatedly without needing to prepare the data each time. The chunks of code in Sections 1-3 are accordingly set by default to `eval=FALSE`.
+
+**Written by**: A. Paxton (University of California, Berkeley)
+<br>**Date last modified**: 3 October 2016
+
+***
+# Global preliminaries
+
+
+This section takes care of data import and preparation. As a new analysis of the Bloco corpus (Roche, Paxton, Ibarra, & Tanenhaus, 2013, under review; Paxton, Roche, & Tanenhaus, 2015; Paxton, Roche, Ibarra, & Tanenhaus, 2014), the original data file includes coded variables from prior work.
+
+**NOTE**: The chunks of code in this section do not have to be run each time (except for the first chunk), since the resulting datasets will be saved to CSV files. As a result, these chunks are currently set to `eval=FALSE`. Bear this in mind if these data need to be re-calculated.
+
+***
+
+## Load data and libraries
+
+This section loads in the necessary modules and initial data files.
+
+```{r prelim-prelims, warning = FALSE, error = FALSE, message = FALSE}
+
+# preliminaries
+rm(list=ls())
+
+# load functions and parameters for recurrence analyses
+source('./supplementary-code/libraries-and-functions-CM.r')
+source('./supplementary-code/recurrence-settings-CM.r')
+
+```
+
+***
+
+## Add global variables
+
+This section adds a counter for all turns within each dyad (`tTurn`) and a numeric variable for communication type (`commtype`).
+
+```{r add-total-turn-and-numeric-commtype, eval=FALSE}
+
+# import initial data file
+bloco = read.csv('./data/BlocoCharLength12-16-15.csv',
+         header=TRUE,row.names=NULL)
+
+# create a new turn variable that cuts across all trials
+bloco$tTurn = 0
+for (dyad in unique(bloco$Pair)){
+ bloco[bloco$Pair==dyad,]$tTurn =
+  seq(1,length(bloco[bloco$Pair==dyad,]$Turn))
+}
+
+# create numeric (factor) communication type variable
+bloco$commtype = as.numeric(bloco$CommunicationType)
+bloco$commtype = as.factor(bloco$commtype)
+
+# export new file
+write.csv(bloco, './data/bloco-raw_data-coordination_miscommunication_analyses.csv', 
+     row.names=FALSE)
+
+```
+
+***
+
+# Recurrence analyses
+
+This section runs all recurrence-related analyses.
+
+**NOTE**: The chunks of code in this section do not have to be run each time, since the resulting datasets will be saved to CSV files. As a result, these chunks are currently set to `eval=FALSE`. Bear this in mind if these data need to be re-calculated.
+
+***
+
+## Calculating workspace congruence
+
+This section calculates recurrence over partners' workspaces, quantifying the dynamics as two individual time series (i.e., CRQA).
+
+***
+
+### Calculate DRPs over workspaces
+
+We now calculate the diagonal recurrence profile (DRP) for each pair. This quantifies the amount of recurrence between participants within a window of lags around lag-0 (i.e., synchrony). We then plot the mean DRP across all dyads.
+
+```{r workspace-congruency-drps, eval=FALSE}
+
+# subset data to the bare minimum for DRPs over workspace congruence
+bloco_vis = select(bloco,Pair,Trial,Turn,tTurn,Talker,lCong,CommunicationType,commtype)
+
+# run recurrence analyses for each dyad
+cross_rec_drp = data.frame()
+for (dyad in unique(bloco_vis$Pair)){
+
+ # cross-recurrence over the shared workspace
+ p1 = bloco_vis[bloco_vis$Pair==dyad & 
+          bloco_vis$Talker == "E",]$commtype
+ p2 = bloco_vis[bloco_vis$Pair==dyad & 
+          bloco_vis$Talker == "NE",]$commtype
+
+ # ensure that they're of equal lengths; if not, trim longer
+ p.ts = equal.lengths(p1,p2)
+ p1 = unlist(p.ts[[1]])
+ p2 = unlist(p.ts[[2]])
+
+ # generate DRPs for cross-recurrence over partners' workspaces
+ crossrec = drpdfromts(p1,p2,win_size,datatype="categorical",1)
+ next_drp = data.frame(dyad,crossrec$profile,-win_size:win_size)
+ names(next_drp) = c("dyad","rec","lag")
+ cross_rec_drp = rbind.data.frame(cross_rec_drp,next_drp)
+
+}
+
+# write the DRP info to file
+write.csv(cross_rec_drp,'./data/drp-workspace-cross.csv',
+     row.names=FALSE)
+
+```
+
+```{r plot-workspace-drps, eval=FALSE, echo=FALSE, fig.cap="Mean diagonal recurrence plot from CRQA across partners' workspace states.",fig.width=4, fig.height=3, fig.align='center'}
+
+# read in the DRP info
+cross_rec_drp = read.csv('./data/drp-workspace-cross.csv',header=TRUE)
+
+# group data for plotting
+plot_cross_rec = group_by(cross_rec_drp,lag)
+plot_cross_rec = data.frame(summarize(plot_cross_rec,mean(rec)))
+names(plot_cross_rec) = c('lag','rec')
+
+# plot it
+italicized.y.label = expression(paste("Mean RR",sep=""))
+ggplot(plot_cross_rec, aes(lag, rec)) +
+ geom_smooth() +
+ ggtitle('Aggregated Diagonal Recurrence Plot\nfor Communication Type') +
+ ylab(italicized.y.label) + xlab('Lag (Turn)')
+
+# save plot to file
+ggsave('./figures/aggregated_drp_commtype.png', plot = last_plot(), 
+       units = "in", width = 3, height = 3)
+
+# save for knitr
+ggsave('./figures/aggregated_drp_commtype-knitr.png', plot = last_plot(), 
+       units = "in", width = 3, height = 3, dpi=100)
+
+```
+
+![Mean diagonal recurrence plot from CRQA across partners' workspace states.](./figures/aggregated_drp_commtype-knitr.png)
+
+*** 
+
+## Quantifying linguistic coordination
+
+This section calculates recurrence over partners' linguistic coordination. Linguistic and pragmatic contributions are measured turn level. CRQA is run over participants' time series.
+
+Congruent with our previous manuscript (Roche et al., under review), we will focus on the following linguistic and pragmatic metrics, assessed at the turn level:
+
+* **Informativeness** (`charlength`), or the number of characters per turn
+* **Grounding** (`UsedAssent`), or whether a member of LIWC's (Pennebaker, Francis, & Booth, 2007) "Assent" category is used (binary)
+* **Spatial terms** (`spatialutterance`), or whether a member of LIWC's (Pennebaker, Francis, & Booth, 2007) "Spatial" category is used (binary)
+* **Requests for repair** (`RepairPresent`), or whether a question mark is used (binary)
+
+***
+
+### Run CRQA over categorical linguistic data
+
+Here, we run CRQA over partners' linguistic and pragmatic data. Three of the variables (`UsedAssent`, `spatialutterance`, and `repairPresent`) are binary and are subject to categorical CRQA. 
+
+```{r linguistic-recurrence-categorical, tidy=FALSE, eval=FALSE}
+
+# read in bloco dataset
+bloco = read.csv('./data/bloco-raw_data-coordination_miscommunication_analyses.csv',
+         header=TRUE,row.names=NULL)
+
+# subset data to minimum for recurrence over language
+bloco_lang = select(bloco,Pair,Trial,Turn,tTurn,Talker,
+          charlength,spatialutterance,
+          UsedAssent,RepairPresent)
+
+# standardize informativeness (character length)
+bloco_lang$charlength.std = scale(bloco_lang$charlength)
+
+# run recurrence analyses for each dyad
+cross_rec_spatial = data.frame()
+cross_rec_ground = data.frame()
+cross_rec_repair = data.frame()
+split_df = split(bloco_lang, bloco_lang$Pair)
+for (dyad_df in split_df){
+  
+  # divide by participant
+  p1 = dyad_df[dyad_df$Talker == "E",]
+  p2 = dyad_df[dyad_df$Talker == "NE",]
+    
+  # perform cross-recurrence over spatial terms
+  crossrec = crqa(p1$spatialutterance, p2$spatialutterance, 
+                  delay, embed, rescale, radius, normalize,
+                  mindiagline, minvertline, tw, whiteline, recpt, side, checkl)
+  next_data_line = data.frame(c(dyad,crossrec[1:9]))
+  names(next_data_line) = c("dyad",names(crossrec[1:9]))
+  cross_rec_spatial = rbind.data.frame(cross_rec_spatial,next_data_line)
+  
+  # perform cross-recurrence over grounding
+  crossrec = crqa(p1$UsedAssent, p2$UsedAssent, 
+                  delay, embed, rescale, radius, normalize,
+                  mindiagline, minvertline, tw, whiteline, recpt, side, checkl)
+  next_data_line = data.frame(c(dyad,crossrec[1:9]))
+  names(next_data_line) = c("dyad",names(crossrec[1:9]))
+  cross_rec_ground = rbind.data.frame(cross_rec_ground,next_data_line)
+  
+  # perform cross-recurrence over repairs
+  crossrec = crqa(p1$RepairPresent, p2$RepairPresent, 
+                  delay, embed, rescale, radius, normalize,
+                  mindiagline, minvertline, tw, whiteline, recpt, side, checkl)
+  next_data_line = data.frame(c(dyad,crossrec[1:9]))
+  names(next_data_line) = c("dyad",names(crossrec[1:9]))
+  cross_rec_repair = rbind.data.frame(cross_rec_repair,next_data_line)
+}
+
+# save CRQA results stats to files
+write.csv(cross_rec_spatial,'./data/CRQA-spatial.csv',row.names=FALSE)
+write.csv(cross_rec_ground,'./data/CRQA-ground.csv',row.names=FALSE)
+write.csv(cross_rec_repair,'./data/CRQA-repair.csv',row.names=FALSE)
+
+```
+
+***
+
+### Run CRQA over continuous linguistic data
+
+Our final predictor (`charlength`) is continuous, so it is standardized and then subjected to continuous CRQA instead. A supplementary source file (`./supplementary-code/continuous-rqa-parameters-CM.r`) calculates the necessary parameters for this step.
+
+```{r calculate-continuous-crqa-parameters, eval=FALSE}
+
+source('./supplementary-code/continuous-rqa-parameters-CM.r')
+
+```
+
+
+```{r linguistic-recurrence-informativeness, eval=FALSE}
+
+# read in our chosen parameters
+crqa_parameters = read.table('./data/crqa_data_and_parameters-CM.csv', sep=',',header=TRUE)
+
+# run recurrence analyses for each dyad
+cross_rec_info = data.frame()
+split_df = split(crqa_parameters, crqa_parameters$Pair)
+for (dyad in split_df){
+  
+  # identify our parameters here
+  chosen_radius = unique(dyad$chosen_radius)
+  chosen_delay = unique(dyad$chosen_delay)
+  chosen_embed = unique(dyad$chosen_embed)
+  pair = unique(dyad$Pair)
+  
+  # perform cross-recurrence over informativeness
+  p1 = dyad[dyad$Talker == "E",]$rescale_charlength
+  p2 = dyad[dyad$Talker == "NE",]$rescale_charlength
+  crossrec = crqa(p1, p2, delay=chosen_delay, embed=chosen_embed, 
+                  radius=chosen_radius, rescale=0,
+                  normalize, mindiagline, minvertline, tw, 
+                  whiteline, recpt, side, checkl)
+  next_data_line = data.frame(c(pair,crossrec[1:9]))
+  names(next_data_line) = c("dyad",names(crossrec[1:9]))
+  cross_rec_info = rbind.data.frame(cross_rec_info,next_data_line)
+  
+}
+
+# save CRQA results stats to files
+write.csv(cross_rec_info,'./data/CRQA-info.csv',row.names=FALSE)
+
+```
+
+***
+
+### Calculate DRPs over categorical linguistic data
+
+After having obtained the full CRQA data from the previous section, we now calculate the diagonal recurrence profile (DRP) for each pair. This quantifies the amount of recurrence between participants within a window of lags around lag-0 (i.e., synchrony). We then plot the mean DRP for each linguistic metric across all dyads.  This section focuses only on the categorical linguistic data: `repair`, `ground`, and `spatial`.
+
+```{r linguistic-congruency-drps-categorical, eval=FALSE}
+
+# subset data to minimum for recurrence over language
+bloco_lang = select(bloco,Pair,Trial,Turn,tTurn,Talker,
+        charlength,spatialutterance,
+        UsedAssent,RepairPresent)
+
+# split by dyad
+split_df = split(bloco_lang, bloco_lang$Pair)
+
+# run recurrence analyses for each dyad
+drp_repair = data.frame()
+drp_ground = data.frame()
+drp_spatial = data.frame()
+for (dyad in split_df){
+  
+  # find pair number
+  pair = unique(dyad$Pair)
+  
+  # equalize lengths
+  p1 = dyad[dyad$Talker == "E",]
+  p2 = dyad[dyad$Talker == "NE",]
+  trimmed.ts = equal.lengths(p1,p2)
+  p1 = trimmed.ts[[1]]
+  p2 = trimmed.ts[[2]]
+  
+  # generate DRPs for cross-recurrence over grounding words
+  crossrec = drpdfromts(p1$UsedAssent,p2$UsedAssent,
+                        ws=win_size,datatype="categorical",radius=.00001)
+  next_drp = data.frame(pair,crossrec$profile,-win_size:win_size)
+  names(next_drp) = c("dyad","rec","lag")
+  drp_ground = rbind.data.frame(drp_ground,next_drp)
+
+  # generate DRPs for cross-recurrence over spatial data
+  crossrec = drpdfromts(p1$spatialutterance,p2$spatialutterance,
+                        ws=win_size,datatype="categorical",radius=.00001)
+  next_drp = data.frame(pair,crossrec$profile,-win_size:win_size)
+  names(next_drp) = c("dyad","rec","lag")
+  drp_spatial = rbind.data.frame(drp_spatial,next_drp)
+
+  # generate DRPs for cross-recurrence over repair data
+  crossrec = drpdfromts(p1$RepairPresent,p2$RepairPresent,
+                        ws=win_size,datatype="categorical",radius=.00001)
+  next_drp = data.frame(pair,crossrec$profile,-win_size:win_size)
+  names(next_drp) = c("dyad","rec","lag")
+  drp_repair = rbind.data.frame(drp_repair,next_drp)
+}
+
+# write the DRP info to file
+write.csv(drp_repair,'./data/drp-repair.csv',row.names=FALSE)
+write.csv(drp_ground,'./data/drp-ground.csv',row.names=FALSE)
+write.csv(drp_spatial,'./data/drp-spatial.csv',row.names=FALSE)
+
+```
+
+***
+
+### Calculate DRPs over continuous linguistic data
+
+We here focus on the continuous linguistic variable, `info`.
+
+```{r linguistic-congruency-drps-continuous, eval=FALSE}
+
+# read in our chosen parameters
+crqa_parameters = read.table('./data/crqa_data_and_parameters-CM.csv', sep=',',header=TRUE)
+
+# run recurrence analyses for each dyad
+drp_info = data.frame()
+split_df = split(crqa_parameters, crqa_parameters$Pair)
+for (dyad in split_df){
+  
+  # identify our parameters here
+  chosen_radius = unique(dyad$chosen_radius)
+  pair = unique(dyad$Pair)
+  
+  # equalize lengths
+  p1 = dyad[dyad$Talker == "E",]
+  p2 = dyad[dyad$Talker == "NE",]
+  trimmed.ts = equal.lengths(p1,p2)
+  p1 = trimmed.ts[[1]]
+  p2 = trimmed.ts[[2]]
+  
+  # generate DRPs for cross-recurrence over informativeness data
+  crossrec = drpdfromts(p1$rescale_charlength,p2$rescale_charlength,
+                        ws=win_size,datatype="continuous",radius=chosen_radius)
+  next_drp = data.frame(pair,crossrec$profile,-win_size:win_size)
+  names(next_drp) = c("dyad","rec","lag")
+  drp_info = rbind.data.frame(drp_info,next_drp)
+}
+
+# write the DRP info to file
+write.csv(drp_info,'./data/drp-info.csv',row.names=FALSE)
+
+```
+
+***
+
+### Merge DRP metrics with other data
+
+Next, we need to prep the DRP data for statistical analysis. This section uses `dplyr` to quickly merge dataframes into a single output for us.
+
+```{r combine-all-drps-plus-metrics, eval=FALSE}
+
+# load in the DRP files we need
+drp_ground = read.csv('./data/drp-ground.csv',row.names=NULL,header=TRUE)
+drp_info = read.csv('./data/drp-info.csv',row.names=NULL,header=TRUE)
+drp_repair = read.csv('./data/drp-repair.csv',row.names=NULL,header=TRUE)
+drp_spatial = read.csv('./data/drp-spatial.csv',row.names=NULL,header=TRUE)
+drp_workspace = read.csv('./data/drp-workspace-cross.csv',
+             row.names=NULL,header=TRUE) 
+
+# rename the DRP variables to include descriptive prefix
+drp_ground = add.var.prefix(drp_ground,"ground")
+drp_info = add.var.prefix(drp_info,"info")
+drp_repair = add.var.prefix(drp_repair,"repair")
+drp_spatial = add.var.prefix(drp_spatial,"spatial")
+drp_workspace = add.var.prefix(drp_workspace,"workspace")
+
+# reload original corpus file
+bloco = read.csv('./data/bloco-raw_data-coordination_miscommunication_analyses.csv',
+         header=TRUE,row.names=NULL)
+
+# join all DRP files together
+all.drp.df = join(drp_info, drp_repair, by=c("dyad","lag"))
+all.drp.df = join(all.drp.df,drp_spatial, by=c("dyad","lag"))
+all.drp.df = join(all.drp.df,drp_ground, by=c("dyad","lag"))
+all.drp.df = join(all.drp.df,drp_workspace, by=c("dyad","lag"))
+
+# aggregate metrics of each conversation to join with the DRP metrics
+just.animal = bloco %>% group_by(Pair) %>% 
+ select(Animal) %>% summarize_each(funs(unique))
+total.turns.and.miscomm = bloco %>% group_by(Pair) %>% 
+ select(tTurn,runningcount) %>% summarize_each(funs(max))
+
+# merge our aggregated bloco stats and then all DRPs
+aggregate.bloco = left_join(just.animal,total.turns.and.miscomm, by="Pair")
+aggregate.bloco.full = left_join(aggregate.bloco,all.drp.df, by=c("Pair" = "dyad"))
+
+```
+
+***
+
+## Rename variables and save
+
+Now that we've aggregated the recurrence data, let's take care of some last variable renaming and treatment before saving.
+
+```{r recurrence-cleanup-and-save, eval=FALSE}
+
+# rename some variables in aggregated dataframe
+aggregate.bloco.full = plyr::rename(aggregate.bloco.full, 
+                  c("runningcount" = "total.miscomm"))
+aggregate.bloco.full = plyr::rename(aggregate.bloco.full, 
+                  c("Pair" = "dyad"))
+
+# save cleaned dataframes
+write.csv(aggregate.bloco.full,'./data/bloco-drp_all+aggregated_data.csv',
+     row.names=FALSE)
+
+```
+
+***
+
+# Data preparation
+
+After obtaining the recurrence metrics, we now prepare all data for analysis.
+
+**NOTE**: The chunks of code in this section do not have to be run each time, since the resulting datasets will be saved to CSV files. As a result, these chunks are currently set to `eval=FALSE`. Bear this in mind if these data need to be re-calculated.
+
+***
+
+## Preliminaries
+
+This section clears the workspace and reads in the prepared data files.
+
+```{r prep-prelims, warning = FALSE, error = FALSE, message = FALSE}
+
+# clean up the workspace
+rm(list=ls())
+
+# import data
+agg.bloco = read.csv('./data/bloco-drp_all+aggregated_data.csv',
+           header=TRUE,row.names=NULL)
+
+# re-read the supplementary info from other files
+source('./supplementary-code/libraries-and-functions-CM.r')
+source('./supplementary-code/recurrence-settings-CM.r')
+```
+
+***
+
+## A note about dealing with lags
+
+In planning the current analysis, we did not believe that the participants' roles in the experiment (i.e., whether the participant was eye-tracked or non-eye-tracked) would lead to a substantial change in leader/follower dynamics. As a result, we did not plan the study with an interest in exploring *specific* lag/lead dynamics; we were simply interested in the overarching *patterns* of coordination. As a result, we planned to transform lag into a variable measuring the time (in turns) from coordination, similar to previous analyses (cf. Paxton & Dale, 2013, *Quarterly Journal of Experimental Psychology*).
+
+With this thinking, we had planned to analyze the absolute time-from-lag-0 value, rather than preserving the leader-follower structure within the data. After plotting the data (see DRP figure), however, it became evident that there were leader/follower patterns within the data. As a result, we decided to preserve the leader/follower dynamics within our analyses in order to more faithfully model the dynamics of the data (cf. Main, Paxton, & Dale, 2016, *Emotion*).
+
+Although we cannot be sure of the reasons behind these patterns, these may be linked to the role of the participant -- that is, whether the participant was wearing the eyetracker (E) or not (NE). An E-leading pattern would be reflected in the DRP as a spike on the left-hand side relative to the right-hand side; an NE-leading pattern would be the reverse pattern.
+
+In this task, the first participant to speak in the interaction was always the NE participant. During experiment design, this was simply a way of arbitrarily beginning the interaction. However, the characteristic patterns of E-NE dynamics in all of the DRPs may suggest that there is a "history" of this pattern that stays with the dyad throughout the entire interaction (cf. dynamical systems perspective).
+
+***
+
+## Prepare for growth curve analyses
+
+Given our decision to preserve the leader/follower dynamics of the data, we needed to capture the nonlinear shape of the DRPs. Therefore, we implement growth curve analyses to capture the nonlinear shape of the behavior across lags (for more, see Mirman, 2014).
+
+Here, we explore the first- and second-order polynomials over lag. All polynomials are derived orthogonally in order to allow independent interpretation (cf. Mirman, 2014).
+
+We also create a new term (`miscomm.ratio`) that accounts for the rate of miscommunication by dividing number of miscommunication turns by the total turns taken by the dyad.
+
+```{r polynomial-lag-and-miscomm, eval=FALSE}
+
+# create miscommunciation rate term
+agg.bloco$miscomm.ratio = agg.bloco$total.miscomm/agg.bloco$tTurn
+
+# aggregate data at each lag
+agg.all.lag = agg.bloco %>% ungroup() %>%
+ select(info.rec, repair.rec, spatial.rec, ground.rec, workspace.rec, 
+        lag, dyad, tTurn, miscomm.ratio) %>%
+ group_by(dyad, lag) %>% summarise_each(funs(mean))
+
+# create first- to second-order orthogonal polynomials for lag
+raw.lag = -10:10
+timeVals = data.frame(raw.lag)
+t = poly(raw.lag + 11, 2)
+timeVals[, paste("ot", 1:2, sep="")] = t[timeVals$raw.lag + 11, 1:2]
+
+# join it to the original data table
+agg.all.lag = left_join(agg.all.lag,timeVals, by = c("lag" = "raw.lag"))
+
+```
+
+***
+
+## Aggregate mean recurrence rate variables
+
+For the later analyses, we here create mean RR variables within the +/- 10-turn windows.
+
+```{r mean-RR-variables, eval=FALSE}
+
+# mean RR for informativeness
+mean.rec.values = agg.all.lag %>% group_by(dyad) %>%
+  select(info.rec,ground.rec,spatial.rec,repair.rec,workspace.rec)%>%
+  summarize_each(funs(mean)) %>%
+  setNames(paste0('mean.', names(.))) %>%
+  mutate(dyad = mean.dyad) %>%
+  select(-mean.dyad)
+
+# join everything together
+agg.all.lag = left_join(agg.all.lag,mean.rec.values,by="dyad")
+
+```
+
+***
+
+## Create interaction terms of interest
+
+Let's create interaction terms for our models. We need to separately specify them because we are standardizing the variables in the next step.
+
+```{r interaction-vars-agg, eval=FALSE}
+
+# create interactions with first-order polynomial
+agg.ot1.interaction.vars = agg.all.lag %>%
+ ungroup() %>%
+ select(lag,dyad,ot1,ot2,tTurn,miscomm.ratio,matches("rec")) %>%
+ mutate_each(funs(. * ot1), -c(lag,dyad,ot1)) %>%
+ setNames(paste0('ot1.', names(.)))
+agg.ot1.interaction.vars = plyr::rename(agg.ot1.interaction.vars, 
+                    c("ot1.dyad" = "dyad", 
+                     "ot1.ot1" = "ot1", "ot1.lag" = "lag"))
+
+# create interactions with second-order polynomial
+agg.ot2.interaction.vars = agg.all.lag %>%
+ ungroup() %>%
+ select(lag,dyad,ot1,ot2,tTurn,miscomm.ratio,matches("rec")) %>%
+ mutate_each(funs(. * ot2), -c(lag,dyad,ot2)) %>%
+ setNames(paste0('ot2.', names(.)))
+agg.ot2.interaction.vars = plyr::rename(agg.ot2.interaction.vars, 
+                    c("ot2.dyad" = "dyad",
+                     "ot2.ot2" = "ot2", 
+                     "ot2.lag" = "lag"))
+
+# grab just the unique aggregated info for each dyad
+agg.info = agg.bloco %>% ungroup() %>%
+ select(dyad, Animal, tTurn, total.miscomm, miscomm.ratio) %>%
+ distinct() %>% ungroup()
+
+# join everything again
+agg.bloco = join(agg.info,agg.ot1.interaction.vars, by = c("dyad"))
+agg.bloco = join(agg.bloco,agg.ot2.interaction.vars, by = c("dyad", "lag"))
+agg.bloco = join(agg.bloco,agg.all.lag, by = c("dyad", "lag", "ot1", "ot2"))
+
+# convert character variable to numeric
+agg.bloco$Animal = as.numeric(agg.bloco$Animal)
+
+```
+
+Before we standardize the dataframe in the next section, let's save the raw dataframe to facilitate plotting later.
+
+```{r save-plotting-dataframes, eval=FALSE}
+
+# save plotting-ready dataframes
+write.csv(agg.bloco,'./data/bloco-plotting_file-aggregated.csv',
+     row.names=FALSE)
+
+```
+
+***
+
+## Standardize variables
+
+In order to interpret the estimates of our forthcoming mixed-effects models as effect sizes (cf. Keith, 2008), we need to center and scale them before entering them.
+
+```{r scale-agg-bloco-variables, eval=FALSE}
+
+# scale variables from the aggregated dataframe
+agg.st = agg.bloco %>% ungroup() %>%
+ purrr::keep(is.numeric) %>%
+ mutate_each( funs( as.numeric( scale(.) )))
+
+# convert factors back to factors
+agg.st$Animal = as.factor(agg.st$Animal)
+agg.bloco$Animal = as.factor(agg.bloco$Animal)
+
+```
+
+***
+
+## Save analysis-ready files
+
+Now that we've finished all data preparation, let's save the dataframes.
+
+```{r save-analysis-files, eval=FALSE}
+
+# save analysis-ready dataframes
+write.csv(agg.st,'./data/bloco-analysis_file-aggregated.csv', row.names=FALSE)
+
+```
+
+***
+
+# Data analysis
+
+After preparing the data, this section executes the analyses from the current article. (Unlike the previous sections, this section is evaluated again at each run.)
+
+Each model is run once using standardized variables (allowing us to interpret the resulting estimates as effect sizes) and once using raw variables. Models are created with the following structure:
+
+```{r example-models, eval=FALSE}
+
+# example standardized model
+standardized.repair.model = lmer(workspace.rec ~ ot1 + repair.rec + ot1.repair.rec + 
+                  (1 + fef | dyad) + 
+                  (1 + fef | Animal), 
+                  data = agg.st)
+
+# example unstandardized (raw) model
+unstandardized.repair.model = lmer(workspace.rec ~ ot1 + repair.rec + ot1.repair.rec + 
+                  (1 + fef | dyad) + 
+                  (1 + fef | Animal), 
+                  data = agg.plot)
+
+```
+
+where `fef` is the maximal random slope structure for each random intercept that will permit model convergence in the raw dataset. We use random intercepts for both `dyad` and `Animal`, with explanations for any exceptions.
+
+***
+
+## Preliminaries
+
+```{r analysis-prelim}
+
+# clean up the workspace
+rm(list=ls())
+
+# read the supplementary info from other files
+source('./supplementary-code/libraries-and-functions-CM.r')
+source('./supplementary-code/recurrence-settings-CM.r')
+
+# import analysis and plotting dataframes
+agg.st = read.csv('./data/bloco-analysis_file-aggregated.csv', 
+         header=TRUE, row.names=NULL)
+agg.plot = read.csv('./data/bloco-plotting_file-aggregated.csv',
+          header=TRUE, row.names=NULL)
+
+```
+
+***
+
+## Workspace congruence and task outcomes
+
+Before turning to the linguistic and syntactic analyses, we first explore how workspace congruence is related to larger-scale task outcomes.
+
+In these models, we include the random intercept for `Animal` and `dyad`, along with maximal random slopes that permit model convergence.
+
+***
+
+### Success
+
+The idea that increased workspace recurrence should be associated with improved task performance is an important link for the remainder of our analyses. Because all dyads eventually completed their figures (with the exception of very minor errors by 2 dyads), one metric of success is how smoothly the dyad performed the task, as measured by fewer miscommunications.
+
+Therefore, this analysis explores whether the dynamics of workspace congruence (`workspace.rec`) predict improved performance through fewer instances of miscommunciation. Rather than predicting raw counts of miscommunication, we create a ratio of miscommunication turns relative to successful turns (`miscomm.ratio`) in order to abstract away from time spend engaged in the task.
+
+```{r workspace-congruence-and-miscommunication}
+
+# does miscommunciation (as a ratio of total turns) influence workspace congruence?
+accuracy.miscomm.lme.st = lmer(workspace.rec ~ ot1 + ot2 + ot1.ot2 + 
+                                 miscomm.ratio + ot1.miscomm.ratio + ot2.miscomm.ratio + 
+                                  (1 + miscomm.ratio + ot2 | dyad) +
+                                  (1 + miscomm.ratio + ot2 | Animal), 
+                               data = agg.st, REML = FALSE)
+pander_lme(accuracy.miscomm.lme.st,stats.caption=TRUE)
+
+# unstandardized (raw) model
+accuracy.miscomm.lme.raw = lmer(workspace.rec ~ ot1 + ot2 + ot1.ot2 + 
+                                 miscomm.ratio + ot1.miscomm.ratio + ot2.miscomm.ratio + 
+                                  (1 + miscomm.ratio + ot2 | dyad) +
+                                  (1 + miscomm.ratio + ot2 | Animal), 
+                                data = agg.plot, REML = FALSE)
+pander_lme(accuracy.miscomm.lme.raw,stats.caption=TRUE)
+
+
+```
+
+As anticipated, we find that *increased* workspace congruence is associated with *lower* miscommunication rates. We believe that exploring the ties between linguistic patterns and the unfolding dynamics of miscommunication would be an interesting avenue of scientific study in and of themselves. However, the above results suggest that these patterns may also be important to larger-scale task performance.
+
+```{r plot-miscommunication-x-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.",fig.width=3, fig.height=4, fig.align='center'}
+
+# group data for plotting
+plot_interaction = group_by(agg.plot,lag)
+
+# break down miscommunication by quartile (keeping only 1st and 4th)
+plot_interaction = plot_interaction %>%
+  group_by(dyad) %>%
+  summarize(dyad.miscomm = mean(miscomm.ratio)) %>%
+  left_join(plot_interaction, by="dyad") %>%
+  mutate(Miscommunication = as.factor(ntile(dyad.miscomm,4))) %>%
+  filter(Miscommunication==1 | Miscommunication==4)
+
+# plot it
+italicized.y.label = expression(paste("Mean RR",sep=""))
+ggplot(plot_interaction,aes(x = lag, y = workspace.rec, color = Miscommunication)) +
+ ggtitle('Workspace congruence by\nmiscommunication rate and lag') +
+ geom_smooth() +
+ scale_colour_manual(values=c("chartreuse4","red2"), 
+            name="Miscommunication",
+            breaks=c("1","4"),
+            labels=c("Low","High")) +
+ theme(legend.position = "bottom") +
+ ylab(italicized.y.label) + xlab('Lag (Turn)')
+
+# save plot to file
+ggsave('./figures/workspace_by_miscomm_and_lag.png', plot = last_plot(), 
+       units = "in", width = 3, height = 4)
+
+# save plot to file for knitr
+ggsave('./figures/workspace_by_miscomm_and_lag-knitr.png', plot = last_plot(), 
+       units = "in", width = 3, height = 4, dpi=100)
+
+```
+
+![Workspace congruence by rate of miscommunication and lag (in turns). For ease of plotting, we divide the data by miscommunication and graph only the first (i.e., lowest miscommunication) and fourth (i.e., highest miscommunication) quartiles.](./figures/workspace_by_miscomm_and_lag-knitr.png)
+
+***
+
+### Total turns taken
+
+It may also be interesting to see whether the dynamics of workspace congruence relate to the amount of time that a dyad takes (measured in number of turns) to complete the task. Given the results of the miscommunication analysis (`accuracy.miscomm.lme.st`), however, we first explore whether the number of turns significantly predicts the ratio of miscommunication to successful communication. 
+
+It would not here be appropriate to include `dyad` as a random effect, given that the both `tTurn` and `miscomm.ratio` covary perfectly with dyad (i.e., each dyad has a unique value for each of these variables). We still include the maximally permitted random effects structure for `Animal`. (We print only the standardized tests; unstandardized models are also set up in this markdown but silenced from output.)
+
+```{r miscommunication-and-turns-taken-standardized}
+
+# create a subset of the standardized data with one data point per dyad and rescale
+turns.and.miscomm.data.st = agg.st %>% 
+ group_by(dyad, tTurn, total.miscomm, miscomm.ratio, Animal) %>% 
+  summarize()
+turns.and.miscomm.data.st = as.data.frame(scale(turns.and.miscomm.data.st))
+
+# does the rate of miscommunication affect how many turns a dyad takes?
+turns.miscomm.lme.st = lmer(tTurn ~ miscomm.ratio + (1 + miscomm.ratio | Animal),
+            data = turns.and.miscomm.data.st, REML = FALSE)
+pander_lme(turns.miscomm.lme.st,stats.caption=TRUE)
+
+```
+
+```{r miscommunication-and-turns-taken-raw, include=FALSE, eval=FALSE}
+
+# create similar subset for raw dataset
+turns.and.miscomm.data.raw = agg.plot %>% 
+ group_by(dyad, tTurn, total.miscomm, miscomm.ratio, Animal) %>% 
+  summarize()
+turns.and.miscomm.data = as.data.frame(turns.and.miscomm.data.raw)
+
+# unstandardized (raw) model
+turns.miscomm.lme.raw = lmer(tTurn ~ miscomm.ratio + (1 + miscomm.ratio | Animal),
+            data = turns.and.miscomm.data.raw, REML = FALSE)
+pander_lme(turns.miscomm.lme.raw,stats.caption=TRUE)
+
+```
+
+The above analysis suggests that the rate of miscommunication does not significantly contribute to the number of turns that a dyad takes to complete the task. That is, more successful dyads statistically take neither more nor fewer turns than less successful dyads.
+
+Next, we explore whether the time taken to complete the task is related to dynamics of workspace congruence.
+
+```{r workspace-congruence-and-total-turns, warning=FALSE}
+
+# does length of time engaged in the task affect workspace congruence?
+accuracy.time.lme.st = lmer(workspace.rec ~ ot1 + ot2 + ot1.ot2 + 
+               tTurn + ot1.tTurn + ot2.tTurn + 
+              (1 + ot1 + ot2 + ot1.ot2 | dyad) +
+              (1 + ot1 + ot2 + ot1.ot2 | Animal),
+              data = agg.st, REML = FALSE)
+pander_lme(accuracy.time.lme.st,stats.caption=TRUE)
+
+# raw (unstandardized) model
+accuracy.time.lme.raw = lmer(workspace.rec ~ ot1 + ot2 + ot1.ot2 + 
+               tTurn + ot1.tTurn + ot2.tTurn + 
+              (1 + ot1 + ot2 + ot1.ot2 | dyad) +
+              (1 + ot1 + ot2 + ot1.ot2 | Animal),
+              data = agg.plot, REML = FALSE)
+pander_lme(accuracy.time.lme.raw,stats.caption=TRUE)
+
+```
+
+```{r plot-turns-x-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.",fig.width=3, fig.height=4, fig.align='center'}
+
+# group data for plotting
+plot_interaction = group_by(agg.plot,lag)
+
+# break down miscommunication by quartile (keeping only 1st and 4th)
+plot_interaction = plot_interaction %>%
+  group_by(dyad) %>%
+  summarize(dyad.turns = mean(tTurn)) %>%
+  left_join(plot_interaction, by="dyad") %>%
+  mutate(Duration = as.factor(ntile(dyad.turns,4))) %>%
+  filter(Duration==1 | Duration==4)
+
+# plot it
+italicized.y.label = expression(paste("Mean RR",sep=""))
+ggplot(plot_interaction,aes(x = lag, y = workspace.rec, color = Duration)) +
+ ggtitle('Workspace congruence by\ntotal duration and lag') +
+ geom_smooth() +
+ scale_colour_manual(values=c("orange2","dodgerblue4"), 
+            name="Duration",
+            breaks=c("1","4"),
+            labels=c("Shortest","Longest")) +
+ theme(legend.position = "bottom") +
+ ylab(italicized.y.label) + xlab('Lag (Turn)')
+
+# save plot to file
+ggsave('./figures/workspace_by_turns_and_lag.png', plot = last_plot(), 
+       units = "in", width = 3, height = 4)
+
+# save smaller version for knitr
+ggsave('./figures/workspace_by_turns_and_lag-knitr.png', plot = last_plot(), 
+       units = "in", width = 3, height = 4,dpi=100)
+
+```
+
+![Workspace congruence by total turns and lag (in turns). For ease of plotting, we divide the data by turns and graph only the first (i.e., fewest turns) and fourth (i.e., most turns) quartiles.](./figures/workspace_by_turns_and_lag-knitr.png)
+
+***
+
+## Workspace congruence and linguistic/semantic categories
+
+This section present the main model of the paper: a linear mixed-effects models predicting workspace congruence (`workspace.rec`) with main and temporal terms for our variables of interest. The model predicts workspace congruence with (1) coordination of each of the four linguistic and semantic variables, (2) the linear and quadratic lag terms (i.e., first- and second-order orthogonal polynomials, respectively), and (3) all two-way interactions between the four target variables and both time variables.
+
+For each model, we also present the *variance inflation factor* (VIF; calculated with the `fmsb` package). This allows us to explore multicollinearity across variables included in the linear model; a VIF value greater than 10 is generally indicative of multicollinearity within the model. 
+
+**Note**: The `VIF` function within `fmsb` was created to work with output from standard linear models created with the `lm` call, not with the `lmer` call from the `lme4` package. We therefore create an identical model without the random effects structure to generate the VIF value.
+
+***
+
+```{r lme-all-x-gcm-on-workspace-congruence, eval=TRUE}
+
+# standardized model
+all.lme.st = lmer(workspace.rec ~ ot1 + ot2 + ot1.ot2 +
+                    mean.info.rec + ot1.mean.info.rec + ot2.mean.info.rec +
+                    mean.ground.rec + ot1.mean.ground.rec + ot2.mean.ground.rec +
+                    mean.repair.rec + ot1.mean.repair.rec + ot2.mean.repair.rec + 
+                    mean.spatial.rec + ot1.mean.spatial.rec + ot2.mean.spatial.rec +
+                    (1 + ot1 + ot2 + ot1.ot2 | dyad) +
+                    (1 + ot1 + ot2 + ot1.ot2 | Animal),
+                  data = agg.st, REML = FALSE)
+pander_lme(all.lme.st,stats.caption = TRUE)
+
+# unstandardized model
+all.lme.raw = lmer(workspace.rec ~ ot1 + ot2 + ot1.ot2 +
+                    mean.info.rec + ot1.mean.info.rec + ot2.mean.info.rec +
+                    mean.ground.rec + ot1.mean.ground.rec + ot2.mean.ground.rec +
+                    mean.repair.rec + ot1.mean.repair.rec + ot2.mean.repair.rec + 
+                    mean.spatial.rec + ot1.mean.spatial.rec + ot2.mean.spatial.rec + 
+                    (1 + ot1 + ot2 + ot1.ot2 | dyad) +
+                    (1 + ot1 + ot2 + ot1.ot2 | Animal),
+                  data = agg.plot, REML = FALSE)
+pander_lme(all.lme.raw,stats.caption = TRUE)
+
+# check for multicollinearity
+VIF(lm(workspace.rec ~ ot1 + ot2 + ot1.ot2 +
+         mean.info.rec + ot1.mean.info.rec + ot2.mean.info.rec +
+         mean.ground.rec + ot1.mean.ground.rec + ot2.mean.ground.rec +
+         mean.repair.rec + ot1.mean.repair.rec + ot2.mean.repair.rec + 
+         mean.spatial.rec + ot1.mean.spatial.rec + ot2.mean.spatial.rec,
+       data = agg.plot))
+
+```
+
+***
+
+# Discussion
+
+These analyses explored the ways in which the temporal dynamics of language affect miscommunication. We took a coordination-focused approach, employing cross-recurrence quantification analysis (*CRQA*). Using these analyses, we explored how coordination (i.e., second-order lag polynomial) and leading/following (i.e., first-order lag polynomial) patterns of four linguistic and semantic categories affect workspace congruence: informativeness, grounding, spatial terms, and requests for repair.
+
+Although there are various ways in which we can measure success, we quantified success as the smoothness with which dyads completed their animal puzzle. We found support for the connection between the moment-to-moment workspace dynamics and the overall amount of miscommunication in the task. That is, more successful dyads were characterized by greater overall recurrence of the workspace state.
+
+We found both informativeness and grounding were significantly predictive of success dynamics. More similar levels of informativeness between partners was associated with greater levels of success overall and with stronger coupling of success. The effects for grounding were reversed: Lower levels of shared grounding predicted greater success and were less tightly coupled in workspace.
+
+Taken together, these analyses provide a new look at the dynamics of miscommunication and contribute to ongoing discussions of the nature of coordination. The majority of previous work on miscommunication has tended to focus on the *repair* of miscommunication. Here, we instead focus on the dynamics of success and miscommunication alone, providing a descriptive portrait of the language of each within a collaborative task.
+
+We see our results as fitting with a growing perspective within coordination that challenges the simple "more is better" view of coordination (e.g., Abney, Paxton, Dale, & Kello, 2015; Fusaroli et al., 2012; Riley, Richardson, Shockley, & Ramenzoni, 2011). Although many of these behaviors are coordinated generally, that coordination can have positive, negative, or no significant effects on task success. These patterns suggest that increased coordination may not present a uniform benefit to interaction.
+
+
+```{r plot-info-x-lag-on-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by mean joint informativeness and lag (in turns).", fig.width=3, fig.height=4, fig.align='center'}
+
+# group data for plotting
+plot_interaction = group_by(agg.plot,lag)
+
+# quartile split for mean joint grounding
+plot_interaction = plot_interaction %>%
+  group_by(dyad) %>%
+  summarize(dyad.info = mean(mean.info.rec)) %>%
+  left_join(plot_interaction, by="dyad") %>%
+  mutate(Individuals = as.factor(round(dyad.info,3))) %>%
+  mutate(Informativeness = as.factor(ntile(dyad.info,4)))
+  
+# plot it
+info_plot = plot_qi(df=plot_interaction,
+                      x_var_name='lag',
+                      y_var_name='workspace.rec',
+                      quartile_var_name='Informativeness',
+                      individual_var_name='Individuals',
+                      plot_title="A. Informativeness",
+                      x_label='',
+                      y_label='Mean RR')
+
+```
+
+```{r plot-ground-x-lag-on-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by mean joint grounding and lag (in turns).",fig.width=3, fig.height=4, fig.align='center'}
+
+# group data for plotting
+plot_interaction = group_by(agg.plot,lag)
+
+# quartile split for mean joint grounding
+plot_interaction = plot_interaction %>%
+  group_by(dyad) %>%
+  summarize(dyad.ground = mean(mean.ground.rec)) %>%
+  left_join(plot_interaction, by="dyad") %>%
+  mutate(Individuals = as.factor(round(dyad.ground,3))) %>%
+  mutate(Grounding = as.factor(ntile(dyad.ground,4)))
+
+# plot it
+grounding_plot = plot_qi(df=plot_interaction,
+                         x_var_name='lag',
+                         y_var_name='workspace.rec',
+                         quartile_var_name='Grounding',
+                         individual_var_name='Individuals',
+                         plot_title="B. Grounding",
+                         x_label='',
+                         y_label='')
+
+```
+
+```{r plot-repair-x-lag-on-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by mean joint repair requests and lag (in turns).",fig.width=3, fig.height=4, fig.align='center'}
+
+# group data for plotting
+plot_interaction = group_by(agg.plot,lag)
+
+# quartile split for requests for repair
+plot_interaction = plot_interaction %>%
+  group_by(dyad) %>%
+  summarize(dyad.repair = mean(mean.repair.rec)) %>%
+  left_join(plot_interaction, by="dyad") %>%
+  mutate(Individuals = as.factor(round(dyad.repair,3))) %>%
+  mutate(Repair = as.factor(ntile(dyad.repair,4)))
+
+# plot it
+repair_plot = plot_qi(df=plot_interaction,
+                      x_var_name='lag',
+                      y_var_name='workspace.rec',
+                      quartile_var_name='Repair',
+                      individual_var_name='Individuals',
+                      plot_title="C. Repair requests",
+                      x_label='Lag (Turns)',
+                      y_label='Mean RR')
+
+# create a separate plot just for the legend
+repair_plot_legend = ggplot(plot_interaction,
+                            aes(x = lag, 
+                                y = workspace.rec, 
+                                color = Repair)) +
+  geom_smooth() +
+  scale_color_viridis(discrete=TRUE,
+                      name = 'Joint behavior \n(Quartile)',
+                      breaks=c(1,2,3,4),
+                      labels=c("Q. 1","Q. 2","Q. 3","Q. 4"))
+
+```
+
+```{r plot-spatial-x-lag-on-workspace-congruence, eval=FALSE, echo=FALSE, fig.cap="Workspace congruence by mean joint use of spatial terms and lag (in turns).",fig.width=3, fig.height=4, fig.align='center'}
+
+# group data for plotting
+plot_interaction = group_by(agg.plot,lag)
+
+# break down mean joint grounding by quartile
+plot_interaction = plot_interaction %>%
+  group_by(dyad) %>%
+  summarize(dyad.spatial = mean(mean.spatial.rec)) %>%
+  left_join(plot_interaction, by="dyad") %>%
+  mutate(Individuals = as.factor(round(dyad.spatial,3))) %>%
+  mutate(Spatial = as.factor(ntile(dyad.spatial,4)))
+
+# plot it
+spatial_plot = plot_qi(df=plot_interaction,
+                       x_var_name='lag',
+                       y_var_name='workspace.rec',
+                       quartile_var_name='Spatial',
+                       individual_var_name='Individuals',
+                       plot_title="D. Spatial terms",
+                       x_label='Lag (Turns)',
+                       y_label='')
+
+```
+
+```{r plot-all-interactions, eval=FALSE, echo = FALSE, fig.cap="Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).",fig.width=5, fig.height=5, fig.align='center'}
+
+# create a master legend
+master_legend = gtable_filter(ggplot_gtable(
+  ggplot_build(repair_plot_legend + theme(legend.position="bottom"))), 
+  "guide-box")
+
+# arrange the plots
+italicized.y.label = expression(paste("Mean RR",sep=""))
+grid.arrange(
+  top=textGrob("Workspace congruence by lag\nand joint linguistic behavior",
+               gp=gpar(fontsize=14)),
+  info_plot,
+  grounding_plot,
+  repair_plot,
+  spatial_plot,
+  bottom=master_legend,
+  ncol = 2
+)
+
+# save to file
+ggsave('./figures/workspace-lag-linguistic-interactions.png',
+       units = "in", width = 5, height = 7,
+       grid.arrange(
+         top=textGrob("Workspace congruence by lag\nand joint linguistic behavior",
+                      gp=gpar(fontsize=14)),
+         info_plot,
+         grounding_plot,
+         repair_plot,
+         spatial_plot,
+         bottom=master_legend,
+         ncol = 2
+       ))
+
+# save smaller version for knitr
+ggsave('./figures/workspace-lag-linguistic-interactions-knitr.png',
+       units = "in", width = 5, height = 7, dpi=100,
+       grid.arrange(
+         top=textGrob("Workspace congruence by lag\nand joint linguistic behavior",
+                      gp=gpar(fontsize=14)),
+         info_plot,
+         grounding_plot,
+         repair_plot,
+         spatial_plot,
+         bottom=master_legend,
+         ncol = 2
+       ))
+
+```
+
+![Workspace congruence by mean joint use of our four linguistic and semantic variables (i.e., informativeness, grounding, spatial terms, and repair requests) and lag (in turns). For ease of plotting, we divide the data for each variable and graph them in ascending order from purple (first quartile: lowest) to yellow (fourth quartile: highest) with the `viridis` color scheme (Garnier, 2016).](./figures/workspace-lag-linguistic-interactions-knitr.png)
