@@ -1,5 +1,4 @@
-# Dynamics of Coordination in Miscommunication
-## Data analysis for Paxton, Roche, & Tanenhaus (in preparation)
+# Dynamics of Coordination in Miscommunication: Data analysis for Paxton, Roche, & Tanenhaus (in preparation)
 
 This repo contains the code for the analyses presented in our manuscript, "Two to tangle: Conceptualizing miscommunication as a dyadic process" (Paxton, Roche, & Tanenhaus, in preparation).
 
