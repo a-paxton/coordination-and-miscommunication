@@ -8,7 +8,7 @@
 #####################################################################################
 
 #### Set working directory ####
-setwd('/users/alexandra/dropbox/bloco-newest/')
+setwd('.')
 
 #### Load necessary libraries ####
 library(crqa)
