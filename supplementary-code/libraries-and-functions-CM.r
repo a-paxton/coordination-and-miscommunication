@@ -7,12 +7,6 @@
 # Date last modified: 29 January 2017
 #####################################################################################
 
-<<<<<<< HEAD
-=======
-#### Set working directory ####
-setwd('.')
-
->>>>>>> origin/master
 #### Load necessary libraries ####
 library(crqa)
 library(lme4)
