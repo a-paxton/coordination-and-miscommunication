@@ -1,15 +1,18 @@
 #### libraries-and-functions-CM.r: Part of `coordination-miscommunication-analyses.Rmd` ####
 #
-# This script sets the working directory, loads libraries, creates a number of 
+# This script loads libraries and creates a number of 
 # additional functions to facilitate data prep and analysis.
 #
 # Written by: A. Paxton (University of California, Berkeley)
-# Date last modified: 2 September 2016
+# Date last modified: 29 January 2017
 #####################################################################################
 
+<<<<<<< HEAD
+=======
 #### Set working directory ####
 setwd('.')
 
+>>>>>>> origin/master
 #### Load necessary libraries ####
 library(crqa)
 library(lme4)
